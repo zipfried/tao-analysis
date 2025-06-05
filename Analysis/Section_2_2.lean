@@ -74,9 +74,11 @@ theorem Nat.add_comm (n m : Nat) : n + m = m + n := by
 
 /-- Proposition 2.2.5 (Addition is associative) / Exercise 2.2.1-/
 theorem Nat.add_assoc (a b c : Nat) : (a + b) + c = a + (b + c) := by
-  revert a; apply induction
-  . rw[zero_add, zero_add]
-  intro a ih
+  induction a with
+  | zero =>
+    change (0 + b) + c = 0 + (b + c)
+    rw [zero_add, zero_add]
+  | succ _ ih =>
   rw [succ_add, succ_add, ih, succ_add]
 
 /-- Proposition 2.2.6 (Cancellation law) -/
@@ -133,16 +135,16 @@ theorem Nat.add_eq_zero (a b : Nat) (hab : a + b = 0) : a = 0 ∧ b = 0 := by
 
 /-- Lemma 2.2.10 (unique predecessor) / Exercise 2.2.2 -/
 lemma Nat.uniq_succ_eq (a : Nat) (ha : a.isPos) : ∃! b, b++ = a := by
-  revert a; apply induction
-  . intro ha
+  induction a with
+  | zero =>
     rw [isPos_iff] at ha
     contradiction
-  intro a ih ha
-  use a
+  | succ k ih =>
+    use k
   constructor
   . rfl
-  . intro c hc
-    exact succ_cancel hc
+    . intro y h
+      exact succ_cancel h
 
 /-- Definition 2.2.11 (Ordering of the natural numbers) -/
 instance Nat.instLE : LE Nat where
