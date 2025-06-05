@@ -198,19 +198,44 @@ theorem Nat.succ_gt (n : Nat) : n++ > n := by
 
 (a) (Order is reflexive). -/
 theorem Nat.ge_refl (a : Nat) : a ≥ a := by
-  sorry
+  rw [ge_iff_le, le_iff]
+  use 0
+  rw [add_zero]
 
 /-- (b) (Order is transitive) -/
 theorem Nat.ge_trans {a b c : Nat} (hab : a ≥ b) (hbc : b ≥ c) : a ≥ c := by
-  sorry
+  rw [ge_iff_le, le_iff] at *
+  obtain ⟨d₁, hd₁⟩ := hab
+  obtain ⟨d₂, hd₂⟩ := hbc
+  use d₁ + d₂
+  rw [hd₁, hd₂, add_assoc, add_comm d₁]
 
 /-- (c) (Order is anti-symmetric)  -/
 theorem Nat.ge_antisymm {a b : Nat} (hab : a ≥ b) (hba : b ≥ a) : a = b := by
-  sorry
+  rw [ge_iff_le, le_iff] at hab hba
+  obtain ⟨d₁, hd₁⟩ := hab
+  obtain ⟨d₂, hd₂⟩ := hba
+  have ha : a = a + (d₂ + d₁) := by
+    nth_rewrite 1 [hd₁, hd₂, add_assoc]
+    exact rfl
+  have h0 : d₂ + d₁ = 0 := by
+    nth_rewrite 1 [← add_zero a] at ha
+    rw [add_cancel_left a 0 (d₂ + d₁) ha]
+  have ⟨h₂, h₁⟩ := add_eq_zero d₂ d₁ h0
+  rw [h₁, add_zero] at hd₁
+  exact hd₁
 
 /-- (d) (Addition preserves order)  -/
 theorem Nat.add_ge_add_right (a b c : Nat) : a ≥ b ↔ a + c ≥ b + c := by
-  sorry
+  simp [ge_iff_le, le_iff]
+  constructor
+  . intro ⟨d, h⟩
+    use d
+    rw [add_comm a c, add_comm b c, h, add_assoc]
+  . intro ⟨d, h⟩
+    use d
+    apply add_cancel_left
+    rw [add_comm c a, ← add_assoc c b d, add_comm c b, h]
 
 /-- (d) (Addition preserves order)  -/
 theorem Nat.add_ge_add_left (a b c : Nat) : a ≥ b ↔ c + a ≥ c + b := by
@@ -225,11 +250,47 @@ theorem Nat.add_le_add_left (a b c : Nat) : a ≤ b ↔ c + a ≤ c + b := add_g
 
 /-- (e) a < b iff a++ ≤ b. -/
 theorem Nat.lt_iff_succ_le (a b : Nat) : a < b ↔ a++ ≤ b := by
-  sorry
+  rw [lt_iff, le_iff]
+  constructor
+  . intro ⟨⟨d, h⟩, hne⟩
+    cases d with
+    | zero =>
+      change b = a + 0 at h
+      rw [add_zero] at h
+      exact absurd h.symm hne
+    | succ d' =>
+      use d'
+      rw [h, add_succ, succ_add]
+  . intro ⟨d, h⟩
+    constructor
+    . use (d++)
+      rw [h, add_succ, succ_add]
+    . intro hab
+      rw [h, succ_add, ← add_succ] at hab
+      nth_rewrite 1 [← add_zero a] at hab
+      apply add_cancel_left at hab
+      have : d++ ≠ 0 := succ_ne d
+      contradiction
 
 /-- (f) a < b if and only if b = a + d for positive d. -/
 theorem Nat.lt_iff_add_pos (a b : Nat) : a < b ↔ ∃ d : Nat, d.isPos ∧ b = a + d := by
-  sorry
+  rw [lt_iff]
+  constructor
+  . intro ⟨⟨d, h⟩, hne⟩
+    use d
+    constructor
+    . intro hd
+      rw [hd, add_zero] at h
+      exact absurd h.symm hne
+    . exact h
+  . intro ⟨d, ⟨hd, h⟩⟩
+    constructor
+    . use d
+    . intro hab
+      rw [hab] at h
+      nth_rewrite 1 [← add_zero b] at h
+      apply add_cancel_left at h
+      exact absurd h.symm hd
 
 /-- If a < b then a ̸= b,-/
 theorem Nat.ne_of_lt (a b : Nat) : a < b → a ≠ b := by
