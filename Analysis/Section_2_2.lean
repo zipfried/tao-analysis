@@ -133,7 +133,16 @@ theorem Nat.add_eq_zero (a b : Nat) (hab : a + b = 0) : a = 0 ∧ b = 0 := by
 
 /-- Lemma 2.2.10 (unique predecessor) / Exercise 2.2.2 -/
 lemma Nat.uniq_succ_eq (a : Nat) (ha : a.isPos) : ∃! b, b++ = a := by
-  sorry
+  revert a; apply induction
+  . intro ha
+    rw [isPos_iff] at ha
+    contradiction
+  intro a ih ha
+  use a
+  constructor
+  . rfl
+  . intro c hc
+    exact succ_cancel hc
 
 /-- Definition 2.2.11 (Ordering of the natural numbers) -/
 instance Nat.instLE : LE Nat where
