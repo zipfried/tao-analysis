@@ -312,7 +312,16 @@ theorem Nat.trichotomous (a b : Nat) : a < b ∨ a = b ∨ a > b := by
   -- this proof is written to follow the structure of the original text.
   revert a; apply induction
   . have why : 0 ≤ b := by
-      sorry
+      cases b with
+      | zero =>
+        change 0 ≤ 0
+        rw [le_iff]
+        use 0
+        rw [add_zero]
+      | succ b' =>
+        rw [le_iff]
+        use (b'++)
+        rw [zero_add]
     replace why := (Nat.le_iff_lt_or_eq _ _).mp why
     tauto
   intro a ih
@@ -320,9 +329,31 @@ theorem Nat.trichotomous (a b : Nat) : a < b ∨ a = b ∨ a > b := by
   . rw [lt_iff_succ_le] at case1
     rw [Nat.le_iff_lt_or_eq] at case1
     tauto
-  . have why : a++ > b := by sorry
+  . have why : a++ > b := by
+      rw [gt_iff_lt, lt_iff]
+      constructor
+      . rw [case2]
+        use 1
+        rw [add_comm, one_add]
+      . intro h
+        rw [case2, succ_eq_add_one] at h
+        nth_rewrite 1 [← add_zero b] at h
+        apply add_cancel_left at h
+        rw [show 1 = 0++ from rfl] at h
+        exact succ_ne 0 h.symm
     tauto
-  have why : a++ > b := by sorry
+  have why : a++ > b := by
+    rw [gt_iff_lt, lt_iff] at *
+    obtain ⟨⟨d, hd⟩, hab⟩ := case3
+    constructor
+    . use (d++)
+      simp [← one_add, hd, ← add_assoc]
+      rw [add_comm b]
+    . rw [hd, ← add_succ]
+      intro h
+      nth_rewrite 1 [← add_zero b] at h
+      apply add_cancel_left at h
+      exact succ_ne d h.symm
   tauto
 
 /-- (Not from textbook) The order is decidable.  This exercise is only recommended for Lean experts. -/
