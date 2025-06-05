@@ -79,7 +79,7 @@ theorem Nat.add_assoc (a b c : Nat) : (a + b) + c = a + (b + c) := by
     change (0 + b) + c = 0 + (b + c)
     rw [zero_add, zero_add]
   | succ _ ih =>
-  rw [succ_add, succ_add, ih, succ_add]
+    rw [succ_add, succ_add, ih, succ_add]
 
 /-- Proposition 2.2.6 (Cancellation law) -/
 theorem Nat.add_cancel_left (a b c : Nat) (habc : a + b = a + c) : b = c := by
@@ -141,8 +141,8 @@ lemma Nat.uniq_succ_eq (a : Nat) (ha : a.isPos) : ∃! b, b++ = a := by
     contradiction
   | succ k ih =>
     use k
-  constructor
-  . rfl
+    constructor
+    . rfl
     . intro y h
       exact succ_cancel h
 
@@ -181,7 +181,18 @@ example : (8 : Nat) > 5 := by
   decide
 
 theorem Nat.succ_gt (n : Nat) : n++ > n := by
-  sorry
+  rw [gt_iff_lt, lt_iff]
+  constructor
+  . use 1
+    exact succ_eq_add_one n
+  . have : n ≠ n++ := by
+      induction n with
+      | zero =>
+        exact (succ_ne 0).symm
+      | succ k ih =>
+        intro h
+        exact ih (succ_cancel h)
+    exact this
 
 /-- Proposition 2.2.12 (Basic properties of order for natural numbers) / Exercise 2.2.3
 
