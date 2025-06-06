@@ -52,6 +52,10 @@ abbrev Real.isPos (x:Real) : Prop := ∃ a:ℕ → ℚ, bounded_away_pos a ∧ (
 
 abbrev Real.isNeg (x:Real) : Prop := ∃ a:ℕ → ℚ, bounded_away_neg a ∧ (a:Sequence).isCauchy ∧ x = LIM a
 
+theorem Real.isPos_def (x:Real) : Real.isPos x ↔ ∃ a:ℕ → ℚ, bounded_away_pos a ∧ (a:Sequence).isCauchy ∧ x = LIM a := by rfl
+
+theorem Real.isNeg_def (x:Real) : Real.isNeg x ↔ ∃ a:ℕ → ℚ, bounded_away_neg a ∧ (a:Sequence).isCauchy ∧ x = LIM a := by rfl
+
 /-- Proposition 5.4.4 (basic properties of positive reals) / Exercise 5.4.1 -/
 theorem Real.trichotomous (x:Real) : x = 0 ∨ x.isPos ∨ x.isNeg := by sorry
 
@@ -129,6 +133,9 @@ theorem Real.lt_of_coe (q q':ℚ): q < q' ↔ (q:Real) < (q':Real) := by sorry
 
 theorem Real.gt_of_coe (q q':ℚ): q > q' ↔ (q:Real) > (q':Real) := Real.lt_of_coe _ _
 
+theorem Real.isPos_iff (x:Real) : x.isPos ↔ x > 0 := by sorry
+theorem Real.isNeg_iff (x:Real) : x.isNeg ↔ x < 0 := by sorry
+
 /-- Proposition 5.4.7(a) (order trichotomy) / Exercise 5.4.2 -/
 theorem Real.trichotomous' (x y z:Real) : x > y ∨ x < y ∨ x = y := by sorry
 
@@ -188,6 +195,8 @@ theorem Real.inv_of_pos {x:Real} (hx: x.isPos) : x⁻¹.isPos := by
   simp [hinv_non, hnonneg] at trich
   assumption
 
+theorem Real.div_of_pos {x y:Real} (hx: x.isPos) (hy: y.isPos) : (x/y).isPos := by sorry
+
 theorem Real.inv_of_gt {x y:Real} (hx: x.isPos) (hy: y.isPos) (hxy: x > y) : x⁻¹ < y⁻¹ := by
   have hxnon: x ≠ 0 := nonzero_of_pos hx
   have hynon: y ≠ 0 := nonzero_of_pos hy
@@ -210,4 +219,169 @@ instance Real.instIsStrictOrderedRing : IsStrictOrderedRing Real where
   le_of_add_le_add_left := by sorry
   zero_le_one := by sorry
 
-  
+/-- Proposition 5.4.9 (The non-negative reals are closed)-/
+theorem Real.LIM_of_nonneg {a: ℕ → ℚ} (ha: ∀ n, a n ≥ 0) (hcauchy: (a:Sequence).isCauchy) : LIM a ≥ 0 := by
+  -- This proof is written to follow the structure of the original text.
+  by_contra! hlim
+  set x := LIM a
+  rw [←isNeg_iff, isNeg_def] at hlim
+  obtain ⟨ b, hb, hb_cauchy, hlim ⟩ := hlim
+  rw [bounded_away_neg_def] at hb
+  obtain ⟨ c, cpos, hb ⟩ := hb
+  have claim1 : ∀ n, ¬ (c/2).close (a n) (b n) := by
+    intro n
+    replace ha := ha n
+    replace hb := hb n
+    simp [Section_4_3.close_iff]
+    calc
+      _ < c := by linarith
+      _ ≤ a n - b n := by linarith
+      _ ≤ _ := le_abs_self _
+  have claim2 : ¬ (c/2).eventually_close (a:Sequence) (b:Sequence) := by
+    contrapose! claim1
+    rw [Rat.eventually_close_iff] at claim1
+    obtain ⟨ N, claim1 ⟩ := claim1
+    replace claim1 := claim1 N (le_refl _)
+    use N
+    rwa [Section_4_3.close_iff]
+  have claim3 : ¬ Sequence.equiv a b := by
+    contrapose! claim2
+    rw [Sequence.equiv_def] at claim2
+    exact claim2 (c/2) (half_pos cpos)
+  simp_rw [x, LIM_eq_LIM hcauchy hb_cauchy] at hlim
+  contradiction
+
+/-- Corollary 5.4.10 -/
+theorem Real.LIM_mono {a b:ℕ → ℚ} (ha: (a:Sequence).isCauchy) (hb: (b:Sequence).isCauchy) (hmono: ∀ n, a n ≤ b n) : LIM a ≤ LIM b := by
+  -- This proof is written to follow the structure of the original text.
+  have := LIM_of_nonneg (a := b - a) (by intro n; simp [hmono n]) (sub_of_cauchy hb ha)
+  rw [←Real.sub_of_LIM hb ha] at this
+  linarith
+
+/-- Remark 5.4.11 --/
+theorem Real.LIM_mono_fail : ∃ (a b:ℕ → ℚ), (a:Sequence).isCauchy ∧ (b:Sequence).isCauchy ∧ ¬ (∀ n, a n > b n) ∧ ¬ LIM a > LIM b := by
+  use (fun n ↦ 1 + 1/(n:ℚ))
+  use (fun n ↦ 1 - 1/(n:ℚ))
+  sorry
+
+/-- Proposition 5.4.12 (Bounding reals by rationals) -/
+theorem Real.exists_rat_le_and_nat_ge {x:Real} (hx: x.isPos) : (∃ q:ℚ, q > 0 ∧ (q:Real) ≤ x) ∧ ∃ N:ℕ, x < (N:Real) := by
+  -- This proof is written to follow the structure of the original text.
+  rw [isPos_def] at hx
+  obtain ⟨ a, hbound, hcauchy, heq ⟩ := hx
+  have := Sequence.isBounded_of_isCauchy hcauchy
+  rw [bounded_away_pos_def] at hbound
+  rw [Sequence.isBounded_def] at this
+  obtain ⟨ q, hq, hbound ⟩ := hbound
+  obtain ⟨ r, hr, this ⟩ := this
+  simp [Sequence.BoundedBy_def] at this
+  constructor
+  . refine ⟨ q, hq, ?_ ⟩
+    convert LIM_mono _ hcauchy hbound
+    . exact Real.ratCast_def q
+    exact Sequence.isCauchy_of_const q
+  obtain ⟨ N, hN  ⟩ := exists_nat_gt r
+  use N
+  calc
+    x ≤ r := by
+      rw [Real.ratCast_def r]
+      convert LIM_mono hcauchy _ _
+      . exact Sequence.isCauchy_of_const r
+      intro n
+      replace this := this n
+      simp at this
+      exact (le_abs_self _).trans this
+    _ < ((N:ℚ):Real) := by simp [←Real.lt_of_coe,hN]
+    _ = N := by rfl
+
+/-- Corollary 5.4.13 (Archimedean property ) -/
+theorem Real.le_mul {ε:Real} (hε: ε.isPos) (x:Real) : ∃ M:ℕ, M > 0 ∧ M * ε > x := by
+  -- This proof is written to follow the structure of the original text.
+  rcases trichotomous x with hx | hx | hx
+  . use 1; rw [isPos_iff] at hε; simp [hx, hε]
+  . obtain ⟨ N, hN ⟩ := (exists_rat_le_and_nat_ge (div_of_pos hx hε)).2
+    set M := N+1
+    refine ⟨ M, by positivity, ?_ ⟩
+    replace hN : x/ε < M := hN.trans (by simp [M])
+    replace hN := mul_lt_mul_right hN hε
+    simp
+    convert hN
+    rw [isPos_iff] at hε
+    field_simp
+  use 1
+  rw [isPos_iff] at hε
+  rw [isNeg_iff] at hx
+  simp [hx]
+  linarith
+
+/-- Proposition 5.4.14 / Exercise 5.4.5 -/
+theorem Real.rat_between {x y:Real} (hxy: x < y) : ∃ q:ℚ, x < (q:Real) ∧ (q:Real) < y := by sorry
+
+/-- Exercise 5.4.3 -/
+theorem Real.floor_exist (x:Real) : ∃ n:ℤ, (n:Real) ≤ x ∧ x < (n:Real)+1 := by sorry
+
+/-- Exercise 5.4.4 -/
+theorem Real.exist_inv_nat_le {x:Real} (hx: x.isPos) : ∃ N, N>0 ∧ (N:Real)⁻¹ < x := by sorry
+
+/-- Exercise 5.4.6 -/
+theorem Real.dist_lt_iff (ε x y:Real) : |x-y| < ε ↔ y-ε < x ∧ x < y+ε := by sorry
+
+/-- Exercise 5.4.6 -/
+theorem Real.dist_le_iff (ε x y:Real) : |x-y| ≤ ε ↔ y-ε ≤ x ∧ x ≤ y+ε := by sorry
+
+/-- Exercise 5.4.7 -/
+theorem Real.le_add_eps_iff (x y:Real) : ∀ ε > 0, x ≤ y+ε ↔ x ≤ y := by sorry
+
+/-- Exercise 5.4.7 -/
+theorem Real.dist_le_eps_iff (x y:Real) : ∀ ε > 0, |x-y| ≤ ε ↔ x = y := by sorry
+
+/-- Exercise 5.4.8 -/
+theorem Real.LIM_of_le {x:Real} {a:ℕ → ℚ} (hcauchy: (a:Sequence).isCauchy) (h: ∀ n, a n ≤ x) : LIM a ≤ x := by sorry
+
+/-- Exercise 5.4.8 -/
+theorem Real.LIM_of_ge {x:Real} {a:ℕ → ℚ} (hcauchy: (a:Sequence).isCauchy) (h: ∀ n, a n ≥ x) : LIM a ≥ x := by sorry
+
+theorem Real.max_eq (x y:Real) : max x y = (if x ≥ y then x else y) :=  max_def' x y
+
+theorem Real.min_eq (x y:Real) : min x y = (if x ≤ y then x else y) := rfl
+
+/-- Exercise 5.4.9 -/
+theorem Real.neg_max (x y:Real) : max x y = - min (-x) (-y) := by sorry
+
+/-- Exercise 5.4.9 -/
+theorem Real.neg_min (x y:Real) : min x y = - max (-x) (-y) := by sorry
+
+/-- Exercise 5.4.9 -/
+theorem Real.max_comm (x y:Real) : max x y = max y x := by sorry
+
+/-- Exercise 5.4.9 -/
+theorem Real.max_self (x:Real) : max x x = x := by sorry
+
+/-- Exercise 5.4.9 -/
+theorem Real.max_add (x y z:Real) : max (x + z) (y + z) = max x y + z := by sorry
+
+/-- Exercise 5.4.9 -/
+theorem Real.max_mul (x y :Real) {z:Real} (hz: z.isPos) : max (x * z) (y * z) = max x y * z := by sorry
+/- Additional exercise: What happens if z is negative? -/
+
+/-- Exercise 5.4.9 -/
+theorem Real.min_comm (x y:Real) : min x y = min y x := by sorry
+
+/-- Exercise 5.4.9 -/
+theorem Real.min_self (x:Real) : min x x = x := by sorry
+
+/-- Exercise 5.4.9 -/
+theorem Real.min_add (x y z:Real) : min (x + z) (y + z) = min x y + z := by sorry
+
+/-- Exercise 5.4.9 -/
+theorem Real.min_mul (x y :Real) {z:Real} (hz: z.isPos) : min (x * z) (y * z) = min x y * z := by sorry
+
+/-- Exercise 5.4.9 -/
+theorem Real.inv_max {x y :Real} (hx:x.isPos) (hy:y.isPos) : (max x y)⁻¹ = min x⁻¹ y⁻¹ := by sorry
+
+/-- Exercise 5.4.9 -/
+theorem Real.inv_min {x y :Real} (hx:x.isPos) (hy:y.isPos) : (min x y)⁻¹ = max x⁻¹ y⁻¹ := by sorry
+
+
+
+end Chapter5
